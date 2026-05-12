@@ -125,7 +125,7 @@ export default function HeroSection() {
       />
 
       {/* ── Main content ─────────────────────────────── */}
-      <div className="relative z-10 flex flex-col items-center text-center px-6 max-w-5xl mx-auto">
+      <div className="relative z-10 flex flex-col items-center text-center px-6 max-w-5xl mx-auto pb-32">
         {/* Badge */}
         <motion.div
           initial={{ opacity: 0, y: -16 }}
@@ -217,29 +217,7 @@ export default function HeroSection() {
           </Link>
         </motion.div>
 
-        {/* Scroll hint */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 1.2 }}
-          className="absolute bottom-24 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2"
-          style={{ color: "rgba(240,237,232,0.3)" }}
-        >
-          <span className="text-xs tracking-widest uppercase">Scroll</span>
-          <svg
-            className="w-4 h-4 animate-bounce"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M19 9l-7 7-7-7"
-            />
-          </svg>
-        </motion.div>
+
       </div>
 
       {/* ── Stats bar ─────────────────────────────────── */}
