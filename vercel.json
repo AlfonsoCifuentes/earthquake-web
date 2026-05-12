@@ -1,12 +1,4 @@
 {
-  "version": 2,
-  "functions": {
-    "api/realtime.py": { "runtime": "python3.12" },
-    "api/historical.py": { "runtime": "python3.12" },
-    "api/predictions.py": { "runtime": "python3.12" },
-    "api/alerts.py": { "runtime": "python3.12" },
-    "api/clusters.py": { "runtime": "python3.12" }
-  },
   "headers": [
     {
       "source": "/api/(.*)",
