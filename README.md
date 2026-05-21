@@ -1,36 +1,57 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Seismic Atlas
 
-## Getting Started
+> Visualizador en Tiempo Real de Actividad Sísmica Global
 
-First, run the development server:
+## Resumen
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+Mapa sismico en tiempo real con datos globales de USGS, filtros geoespaciales y exploracion de eventos recientes.
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Valor del proyecto
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Herramienta de divulgación científica y monitoreo sísmico accesible al público general, investigadores y organismos de gestión de emergencias que necesitan visualizar la actividad sísmica mundial de forma intuitiva.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Este proyecto esta orientado a convertir datos reales en una lectura accionable mediante analitica, visualizacion y una narrativa clara para la toma de decisiones.
 
-## Learn More
+## Funcionalidades o puntos fuertes
 
-To learn more about Next.js, take a look at the following resources:
+- Mapa interactivo en tiempo real con datos de USGS
+- Filtros por magnitud, profundidad y rango de fechas
+- Visualización de intensidad sísmica con escala de colores
+- Información detallada por evento (magnitud, profundidad, coordenadas)
+- Diseño responsive y adaptado a dispositivos móviles
+- Integración con GeoJSON para representación geográfica precisa
+- Actualización automática con los últimos eventos registrados
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Stack principal
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- Next.js
+- TypeScript
+- USGS
+- Maps
 
-## Deploy on Vercel
+## Como explorar este proyecto
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- Examinar el dashboard, notebook o flujo analitico principal para entender la historia de los datos.
+- Revisar las variables, metricas y visualizaciones que sostienen las conclusiones.
+- Valorar como el proyecto conecta tratamiento de datos, interpretacion y presentacion ejecutiva.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Ficha rapida
+
+| Campo | Detalle |
+| --- | --- |
+| Repositorio | earthquake-web |
+| Categoria | Data Science |
+| Grupo | Análisis de Datos |
+| Complejidad | Expert |
+| Lenguaje principal | TypeScript |
+| Primera version | 12 de mayo de 2026 |
+| Ultima actualizacion | 12 de mayo de 2026 |
+
+## Enlaces
+
+- Demo en vivo: https://earthquake-web-nine.vercel.app
+- Repositorio: https://github.com/AlfonsoCifuentes/earthquake-web
+
+## Nota
+
+Este README se ha generado a partir del catalogo enriquecido del portfolio para mantener una descripcion consistente, explicativa y lista para evolucionar en cada repositorio.
