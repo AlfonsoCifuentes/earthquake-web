@@ -45,7 +45,7 @@ Este proyecto esta orientado a convertir datos reales en una lectura accionable 
 | Complejidad | Expert |
 | Lenguaje principal | TypeScript |
 | Primera version | 12 de mayo de 2026 |
-| Ultima actualizacion | 12 de mayo de 2026 |
+| Ultima actualizacion | 21 de mayo de 2026 |
 
 ## Enlaces
 
