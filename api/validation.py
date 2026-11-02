@@ -58,3 +58,11 @@ def send_json_response(handler, status_code: int, data: dict, cors_headers: dict
     handler.send_header("Content-Length", str(len(body)))
     handler.end_headers()
     handler.wfile.write(body)
+
+
+from http.server import BaseHTTPRequestHandler
+
+
+class handler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        send_json_response(self, 200, {'status': 'ok', 'service': 'validation'})

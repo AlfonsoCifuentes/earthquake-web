@@ -10,6 +10,13 @@ import os
 import csv
 import math
 from urllib.parse import urlparse, parse_qs
+import os
+import sys
+
+_API_DIR = os.path.dirname(os.path.abspath(__file__))
+if _API_DIR not in sys.path:
+    sys.path.insert(0, _API_DIR)
+
 from validation import parse_bounded_float, parse_bounded_int, send_json_response
 
 CORS = {
