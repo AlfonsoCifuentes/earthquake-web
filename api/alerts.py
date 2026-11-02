@@ -1,19 +1,20 @@
 """
-/api/alerts.py
+api/alerts.py
 Vercel Python Serverless Function
-Fetches USGS significant earthquake feed (last 7 days + 24h alerts).
+Fetches USGS official earthquake feeds (significant_week, m4.5_day, m2.5_hour).
+Explains that alert levels represent magnitude brackets, not official PAGER loss levels.
 """
 from http.server import BaseHTTPRequestHandler
 import json
 import urllib.request
 from urllib.parse import urlparse, parse_qs
 from datetime import datetime, timezone
+from validation import parse_bounded_int, send_json_response
 
 CORS = {
     "Access-Control-Allow-Origin": "*",
     "Access-Control-Allow-Methods": "GET,OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type",
-    "Content-Type": "application/json",
 }
 
 FEEDS = {
@@ -42,9 +43,9 @@ def _alert_level(mag: float) -> str:
 
 def _fetch_feed(url: str):
     try:
-        req = urllib.request.Request(url, headers={"User-Agent": "SeismicAtlas/1.0"})
-        with urllib.request.urlopen(req, timeout=8) as resp:
-            return json.loads(resp.read().decode())
+        req = urllib.request.Request(url, headers={"User-Agent": "SeismicAtlas/1.0 (Alerts)"})
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            return json.loads(resp.read().decode("utf-8"))
     except Exception:
         return None
 
@@ -55,24 +56,32 @@ def _parse_features(data: dict, limit: int = 50):
     for f in (data.get("features", []) if data else [])[:limit]:
         p = f.get("properties", {})
         g = f.get("geometry", {})
-        mag = p.get("mag") or 0.0
+        try:
+            mag = float(p.get("mag") or 0.0)
+        except (ValueError, TypeError):
+            mag = 0.0
+
         ts = p.get("time")
         time_str = (
             datetime.fromtimestamp(ts / 1000, tz=timezone.utc).isoformat()
             if ts else None
         )
-        age_hours = ((now_ms - ts) / 3_600_000) if ts else 9999
+        age_hours = ((now_ms - ts) / 3_600_000) if ts else 9999.0
         coords = g.get("coordinates", [None, None, None])
+        lon = coords[0] if len(coords) > 0 else None
+        lat = coords[1] if len(coords) > 1 else None
+        depth = coords[2] if len(coords) > 2 else None
+
         rows.append(
             {
                 "id": f.get("id", ""),
                 "time": time_str,
                 "age_hours": round(age_hours, 1),
-                "mag": mag,
-                "place": p.get("place", ""),
-                "depth": coords[2],
-                "latitude": coords[1],
-                "longitude": coords[0],
+                "mag": round(mag, 2),
+                "place": p.get("place", "") or "Unknown location",
+                "depth": round(depth, 1) if depth is not None else None,
+                "latitude": round(lat, 4) if lat is not None else None,
+                "longitude": round(lon, 4) if lon is not None else None,
                 "alert": _alert_level(mag),
                 "alert_color": ALERT_COLORS[_alert_level(mag)],
                 "url": p.get("url", ""),
@@ -95,35 +104,44 @@ class handler(BaseHTTPRequestHandler):
     def do_GET(self):
         qs = parse_qs(urlparse(self.path).query)
         feed_type = qs.get("feed", ["significant_week"])[0]
-        limit = int(qs.get("limit", ["50"])[0])
+        if feed_type not in FEEDS:
+            send_json_response(
+                self,
+                400,
+                {"error": f"Unknown feed '{feed_type}'. Allowed: {list(FEEDS.keys())}"},
+                CORS,
+            )
+            return
 
-        url = FEEDS.get(feed_type, FEEDS["significant_week"])
+        try:
+            limit = parse_bounded_int(qs.get("limit", [None])[0], default=50, minimum=1, maximum=500)
+        except ValueError as err:
+            send_json_response(self, 400, {"error": str(err)}, CORS)
+            return
+
+        url = FEEDS[feed_type]
         data = _fetch_feed(url)
         rows = _parse_features(data, limit)
 
-        # Summary
         critical = [r for r in rows if r["alert"] == "critical"]
         high = [r for r in rows if r["alert"] == "high"]
+        moderate = [r for r in rows if r["alert"] == "moderate"]
+        low = [r for r in rows if r["alert"] == "low"]
 
         payload = {
             "feed": feed_type,
+            "source": "usgs",
             "count": len(rows),
+            "disclaimer": "Alert levels (Critical, High, Moderate, Low) are magnitude-based brackets (M>=7, M>=6, M>=5, <M5), not official PAGER loss estimates. Tsunami flag indicates ocean event evaluation by warning centers.",
             "summary": {
                 "critical": len(critical),
                 "high": len(high),
-                "moderate": len([r for r in rows if r["alert"] == "moderate"]),
-                "low": len([r for r in rows if r["alert"] == "low"]),
+                "moderate": len(moderate),
+                "low": len(low),
             },
             "data": rows,
         }
-        body = json.dumps(payload).encode()
-
-        self.send_response(200)
-        for k, v in CORS.items():
-            self.send_header(k, v)
-        self.send_header("Content-Length", str(len(body)))
-        self.end_headers()
-        self.wfile.write(body)
+        send_json_response(self, 200, payload, CORS)
 
     def log_message(self, *args):
         pass

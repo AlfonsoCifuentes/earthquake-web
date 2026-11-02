@@ -1,20 +1,27 @@
 """
-/api/historical.py
+api/historical.py
 Vercel Python Serverless Function
-Serves the 2005-2025 historical earthquake dataset (M>5.5).
-Supports filtering by magnitude, depth, date, region.
+Serves the 2005-2025 historical earthquake dataset (M>=5.5).
+Supports filtering by magnitude, depth, date, and multiple regions.
 """
 from http.server import BaseHTTPRequestHandler
 import json
 import os
 import csv
+import math
 from urllib.parse import urlparse, parse_qs
+from statistics import mean, stdev
+from validation import (
+    parse_bounded_float,
+    parse_bounded_int,
+    parse_iso_date,
+    send_json_response,
+)
 
 CORS = {
     "Access-Control-Allow-Origin": "*",
     "Access-Control-Allow-Methods": "GET,OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type",
-    "Content-Type": "application/json",
 }
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -22,40 +29,47 @@ CSV_PATH = os.path.join(HERE, "..", "data", "2005-2025_mas_de_5_5_E_R.csv")
 
 TECTONIC_REGIONS = {
     "Ring of Fire": [
-        "Japan", "Indonesia", "Philippines", "Chile", "Peru", "Mexico",
-        "Alaska", "Tonga", "Vanuatu", "Papua New Guinea", "New Zealand",
-        "Fiji", "Solomon", "Kermadec", "Marianas", "Ryukyu",
+        "japan", "indonesia", "philippines", "chile", "peru", "mexico",
+        "alaska", "tonga", "vanuatu", "papua new guinea", "new zealand",
+        "fiji", "solomon", "kermadec", "marianas", "ryukyu",
     ],
     "Alpine-Himalayan Belt": [
-        "Turkey", "Greece", "Italy", "Iran", "Pakistan", "India",
-        "Nepal", "Afghanistan", "Tajikistan", "Uzbekistan", "Georgia",
-        "Caucasus", "Hindu Kush",
+        "turkey", "greece", "italy", "iran", "pakistan", "india",
+        "nepal", "afghanistan", "tajikistan", "uzbekistan", "georgia",
+        "caucasus", "hindu kush",
     ],
     "Mid-Atlantic Ridge": [
-        "Atlantic", "Mid-Atlantic", "Azores", "Iceland", "Mid-Indian",
-        "South Atlantic",
+        "atlantic", "mid-atlantic", "azores", "iceland", "south atlantic",
     ],
 }
 
 
 def classify_region(place: str) -> str:
-    pl = place.lower()
+    pl = (place or "").lower()
     for region, keywords in TECTONIC_REGIONS.items():
-        if any(k.lower() in pl for k in keywords):
+        if any(k in pl for k in keywords):
             return region
     return "Other Regions"
 
 
 def _load_csv(
-    min_mag: float,
-    max_mag: float,
-    min_depth: float,
-    max_depth: float,
-    start_date: str,
-    end_date: str,
-    region: str,
-    limit: int,
+    min_mag: float = 5.5,
+    max_mag: float = 10.0,
+    min_depth: float = 0.0,
+    max_depth: float = 700.0,
+    start_date: str | None = None,
+    end_date: str | None = None,
+    regions: list[str] | str | None = None,
+    limit: int = 5000,
 ):
+    # Normalize requested regions to a set
+    requested_regions: set[str] = set()
+    if isinstance(regions, str):
+        if regions and regions != "All":
+            requested_regions = {regions}
+    elif isinstance(regions, (list, tuple)):
+        requested_regions = {r for r in regions if r and r != "All"}
+
     rows = []
     try:
         with open(CSV_PATH, newline="", encoding="utf-8") as f:
@@ -66,9 +80,11 @@ def _load_csv(
                     depth = float(row.get("depth", "") or 0)
                     lat = float(row.get("latitude", "") or 0)
                     lon = float(row.get("longitude", "") or 0)
-                except ValueError:
+                except (ValueError, TypeError):
                     continue
 
+                if not (math.isfinite(mag) and math.isfinite(depth) and math.isfinite(lat) and math.isfinite(lon)):
+                    continue
                 if not (min_mag <= mag <= max_mag):
                     continue
                 if not (min_depth <= depth <= max_depth):
@@ -82,7 +98,7 @@ def _load_csv(
 
                 place = row.get("place", "")
                 tec_region = classify_region(place)
-                if region and region != "All" and tec_region != region:
+                if requested_regions and tec_region not in requested_regions:
                     continue
 
                 rows.append(
@@ -109,10 +125,19 @@ def _load_csv(
 
 def _summary_stats(rows):
     if not rows:
-        return {}
+        return {
+            "total": 0,
+            "avg_mag": 0.0,
+            "max_mag": 0.0,
+            "avg_depth": 0.0,
+            "std_mag": 0.0,
+            "region_counts": {},
+            "top_places": [],
+            "mag_distribution": {"<6": 0, "6-6.9": 0, "7-7.9": 0, "8+": 0},
+        }
+
     mags = [r["mag"] for r in rows]
     depths = [r["depth"] for r in rows]
-    from statistics import mean, stdev
 
     region_counts: dict = {}
     for r in rows:
@@ -139,7 +164,7 @@ def _summary_stats(rows):
         "avg_mag": round(mean(mags), 2),
         "max_mag": round(max(mags), 2),
         "avg_depth": round(mean(depths), 1),
-        "std_mag": round(stdev(mags), 3) if len(mags) > 1 else 0,
+        "std_mag": round(stdev(mags), 3) if len(mags) > 1 else 0.0,
         "region_counts": region_counts,
         "top_places": [{"place": p, "count": c} for p, c in top_places],
         "mag_distribution": mag_dist,
@@ -155,29 +180,51 @@ class handler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         qs = parse_qs(urlparse(self.path).query)
-        min_mag = float(qs.get("min_mag", ["5.5"])[0])
-        max_mag = float(qs.get("max_mag", ["10"])[0])
-        min_depth = float(qs.get("min_depth", ["0"])[0])
-        max_depth = float(qs.get("max_depth", ["700"])[0])
-        start_date = qs.get("start_date", [""])[0]
-        end_date = qs.get("end_date", [""])[0]
-        region = qs.get("region", ["All"])[0]
-        limit = int(qs.get("limit", ["5000"])[0])
+        try:
+            min_mag = parse_bounded_float(qs.get("min_mag", [None])[0], default=5.5, minimum=0.0, maximum=10.0)
+            max_mag = parse_bounded_float(qs.get("max_mag", [None])[0], default=10.0, minimum=0.0, maximum=10.0)
+            if min_mag > max_mag:
+                raise ValueError(f"min_mag ({min_mag}) cannot exceed max_mag ({max_mag})")
+
+            min_depth = parse_bounded_float(qs.get("min_depth", [None])[0], default=0.0, minimum=0.0, maximum=1000.0)
+            max_depth = parse_bounded_float(qs.get("max_depth", [None])[0], default=700.0, minimum=0.0, maximum=1000.0)
+            if min_depth > max_depth:
+                raise ValueError(f"min_depth ({min_depth}) cannot exceed max_depth ({max_depth})")
+
+            start_date = parse_iso_date(qs.get("start_date", [None])[0])
+            end_date = parse_iso_date(qs.get("end_date", [None])[0])
+            if start_date and end_date and start_date > end_date:
+                raise ValueError(f"start_date ({start_date}) cannot be after end_date ({end_date})")
+
+            # Extract all region params
+            regions = qs.get("region", [])
+            limit = parse_bounded_int(qs.get("limit", [None])[0], default=5000, minimum=1, maximum=10000)
+        except ValueError as err:
+            send_json_response(self, 400, {"error": str(err)}, CORS)
+            return
 
         rows = _load_csv(
-            min_mag, max_mag, min_depth, max_depth,
-            start_date, end_date, region, limit
+            min_mag=min_mag,
+            max_mag=max_mag,
+            min_depth=min_depth,
+            max_depth=max_depth,
+            start_date=start_date,
+            end_date=end_date,
+            regions=regions,
+            limit=limit,
         )
         stats = _summary_stats(rows)
-        payload = {"stats": stats, "data": rows}
-        body = json.dumps(payload).encode()
-
-        self.send_response(200)
-        for k, v in CORS.items():
-            self.send_header(k, v)
-        self.send_header("Content-Length", str(len(body)))
-        self.end_headers()
-        self.wfile.write(body)
+        payload = {
+            "stats": stats,
+            "data": rows,
+            "coverage": {
+                "dataset": "2005-2025_mas_de_5_5_E_R.csv",
+                "start": "2005-05-03",
+                "end": "2025-05-08",
+                "minimum_magnitude": 5.5,
+            },
+        }
+        send_json_response(self, 200, payload, CORS)
 
     def log_message(self, *args):
         pass

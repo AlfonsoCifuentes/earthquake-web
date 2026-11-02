@@ -1,8 +1,10 @@
 "use client";
 /* components/maps/ClusterMapInner.tsx */
+import { useMemo } from "react";
 import { MapContainer, TileLayer, CircleMarker, Popup } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import type { ClusterPoint, ClusterCentroid } from "@/lib/types";
+import { mapTiles } from "@/lib/mapConfig";
 
 const CLUSTER_PALETTE = [
   "#e8572a", "#00d4ff", "#30d158", "#ff9500",
@@ -24,6 +26,32 @@ export default function ClusterMapInner({
   centroids: ClusterCentroid[];
   height: number;
 }) {
+  const validPoints = useMemo(() => {
+    return (points || []).filter(
+      (p) =>
+        p &&
+        Number.isFinite(p.latitude) &&
+        Number.isFinite(p.longitude) &&
+        p.latitude >= -90 &&
+        p.latitude <= 90 &&
+        p.longitude >= -180 &&
+        p.longitude <= 180
+    );
+  }, [points]);
+
+  const validCentroids = useMemo(() => {
+    return (centroids || []).filter(
+      (c) =>
+        c &&
+        Number.isFinite(c.lat) &&
+        Number.isFinite(c.lon) &&
+        c.lat >= -90 &&
+        c.lat <= 90 &&
+        c.lon >= -180 &&
+        c.lon <= 180
+    );
+  }, [centroids]);
+
   return (
     <div style={{ height, borderRadius: 16, overflow: "hidden" }}>
       <MapContainer
@@ -34,17 +62,17 @@ export default function ClusterMapInner({
         minZoom={1}
       >
         <TileLayer
-          url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-          attribution='&copy; OSM &copy; CARTO'
-          subdomains="abcd"
-          maxZoom={20}
+          url={mapTiles.url}
+          attribution={mapTiles.attribution}
+          subdomains={mapTiles.subdomains}
+          maxZoom={mapTiles.maxZoom}
         />
         {/* Cluster points */}
-        {points.slice(0, 3000).map((p, i) => (
+        {validPoints.slice(0, 3000).map((p, i) => (
           <CircleMarker
-            key={i}
+            key={p.id || `cp-${i}`}
             center={[p.latitude, p.longitude]}
-            radius={Math.max(3, p.mag * 1.8)}
+            radius={Math.max(3, (p.mag || 5) * 1.8)}
             pathOptions={{
               color: clusterColor(p.cluster),
               fillColor: clusterColor(p.cluster),
@@ -54,19 +82,19 @@ export default function ClusterMapInner({
           >
             <Popup>
               <div style={{ fontFamily: "Inter, sans-serif", fontSize: 12 }}>
-                <b>{p.place}</b><br />
-                Cluster {p.cluster < 0 ? "Noise" : p.cluster}<br />
-                M {p.mag.toFixed(1)} · {p.depth?.toFixed(0)} km
+                <b>{p.place || "Unknown"}</b><br />
+                Cluster: {p.cluster < 0 ? "Noise / Outlier" : `Cluster ${p.cluster + 1}`}<br />
+                M {(p.mag || 0).toFixed(1)} · {(p.depth ?? 0).toFixed(0)} km depth
               </div>
             </Popup>
           </CircleMarker>
         ))}
         {/* Centroids */}
-        {centroids.map((c) => (
+        {validCentroids.map((c) => (
           <CircleMarker
             key={`centroid-${c.cluster}`}
             center={[c.lat, c.lon]}
-            radius={16}
+            radius={18}
             pathOptions={{
               color: clusterColor(c.cluster),
               fillColor: clusterColor(c.cluster),
@@ -77,8 +105,9 @@ export default function ClusterMapInner({
           >
             <Popup>
               <div style={{ fontFamily: "Inter, sans-serif", fontSize: 12 }}>
-                <b>Cluster {c.cluster} centroid</b><br />
-                {c.count} events · Avg M {c.avg_mag.toFixed(1)}
+                <b>{c.name || `Cluster ${c.cluster + 1}`} centroid</b><br />
+                {c.count} events · Avg M {c.avg_mag?.toFixed(1) ?? "—"}<br />
+                Coords: {c.lat.toFixed(2)}°, {c.lon.toFixed(2)}°
               </div>
             </Popup>
           </CircleMarker>

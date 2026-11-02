@@ -28,8 +28,8 @@ export default function PlotlyChart({
     paper_bgcolor: "rgba(0,0,0,0)",
     plot_bgcolor: "rgba(0,0,0,0)",
     font: {
-      family: "Inter, 'Helvetica Neue', sans-serif",
-      color: "rgba(240,237,232,0.75)",
+      family: "var(--font-inter), 'Helvetica Neue', sans-serif",
+      color: "rgba(240,237,232,0.85)",
       size: 12,
     },
     colorway: [
@@ -37,19 +37,19 @@ export default function PlotlyChart({
       "#bf5af2", "#ffd60a", "#ff375f", "#63e6be",
     ],
     xaxis: {
-      gridcolor: "rgba(255,255,255,0.06)",
-      zerolinecolor: "rgba(255,255,255,0.12)",
-      tickfont: { color: "rgba(240,237,232,0.45)", size: 11 },
+      gridcolor: "rgba(255,255,255,0.08)",
+      zerolinecolor: "rgba(255,255,255,0.15)",
+      tickfont: { color: "rgba(240,237,232,0.7)", size: 12 },
     },
     yaxis: {
-      gridcolor: "rgba(255,255,255,0.06)",
-      zerolinecolor: "rgba(255,255,255,0.12)",
-      tickfont: { color: "rgba(240,237,232,0.45)", size: 11 },
+      gridcolor: "rgba(255,255,255,0.08)",
+      zerolinecolor: "rgba(255,255,255,0.15)",
+      tickfont: { color: "rgba(240,237,232,0.7)", size: 12 },
     },
     margin: { l: 52, r: 18, t: 36, b: 52 },
     legend: {
       bgcolor: "rgba(0,0,0,0)",
-      font: { color: "rgba(240,237,232,0.55)", size: 11 },
+      font: { color: "rgba(240,237,232,0.75)", size: 12 },
     },
     hoverlabel: {
       bgcolor: "rgba(10,10,14,0.96)",
@@ -67,10 +67,17 @@ export default function PlotlyChart({
         data={data}
         layout={merged}
         config={{
-          displayModeBar: true,
+          displayModeBar: "hover",
           displaylogo: false,
           responsive: true,
-          modeBarButtonsToRemove: ["select2d", "lasso2d"],
+          modeBarButtonsToRemove: [
+            "select2d",
+            "lasso2d",
+            "autoScale2d",
+            "hoverClosestCartesian",
+            "hoverCompareCartesian",
+            "toggleSpikelines",
+          ],
         }}
         style={{ width: "100%", height }}
         useResizeHandler

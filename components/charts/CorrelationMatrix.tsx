@@ -1,31 +1,59 @@
 "use client";
 /* components/charts/CorrelationMatrix.tsx */
+import { useMemo } from "react";
 import PlotlyChart from "./PlotlyChart";
 import type { Earthquake } from "@/lib/types";
-
-function pearson(a: number[], b: number[]): number {
-  const n = a.length;
-  const ma = a.reduce((s, x) => s + x, 0) / n;
-  const mb = b.reduce((s, x) => s + x, 0) / n;
-  let num = 0, da = 0, db = 0;
-  for (let i = 0; i < n; i++) {
-    const A = a[i] - ma, B = b[i] - mb;
-    num += A * B;
-    da += A * A;
-    db += B * B;
-  }
-  return da && db ? num / Math.sqrt(da * db) : 0;
-}
+import { calculatePearson } from "@/lib/stats";
 
 const FIELDS: (keyof Earthquake)[] = ["mag", "depth", "latitude", "longitude"];
 const LABELS = ["Magnitude", "Depth (km)", "Latitude", "Longitude"];
 
 export default function CorrelationMatrix({ data }: { data: Earthquake[] }) {
-  const arrays = FIELDS.map((f) => data.map((d) => (d[f] as number) ?? 0));
-  const n = FIELDS.length;
-  const z: number[][] = Array.from({ length: n }, (_, i) =>
-    Array.from({ length: n }, (__, j) => parseFloat(pearson(arrays[i], arrays[j]).toFixed(3)))
-  );
+  const { z, textMatrix, hasData } = useMemo(() => {
+    if (!data.length || data.length < 2) {
+      return { z: [], textMatrix: [], hasData: false };
+    }
+
+    const arrays = FIELDS.map((f) =>
+      data.map((d) => (typeof d[f] === "number" && Number.isFinite(d[f] as number) ? (d[f] as number) : NaN))
+    );
+
+    const n = FIELDS.length;
+    const zMatrix: (number | null)[][] = [];
+    const tMatrix: string[][] = [];
+
+    for (let i = 0; i < n; i++) {
+      const zRow: (number | null)[] = [];
+      const tRow: string[] = [];
+      for (let j = 0; j < n; j++) {
+        if (i === j) {
+          zRow.push(1.0);
+          tRow.push("1.00");
+        } else {
+          const r = calculatePearson(arrays[i], arrays[j]);
+          if (r !== null) {
+            zRow.push(parseFloat(r.toFixed(3)));
+            tRow.push(r.toFixed(2));
+          } else {
+            zRow.push(null);
+            tRow.push("N/A");
+          }
+        }
+      }
+      zMatrix.push(zRow);
+      tMatrix.push(tRow);
+    }
+
+    return { z: zMatrix, textMatrix: tMatrix, hasData: true };
+  }, [data]);
+
+  if (!hasData) {
+    return (
+      <div className="flex items-center justify-center h-64 text-xs" style={{ color: "rgba(240,237,232,0.5)" }}>
+        Insufficient observations to compute correlation matrix (minimum 2 events with non-zero variance required).
+      </div>
+    );
+  }
 
   const trace = {
     z,
@@ -35,11 +63,14 @@ export default function CorrelationMatrix({ data }: { data: Earthquake[] }) {
     colorscale: "RdBu",
     zmin: -1,
     zmax: 1,
-    text: z.map((row) => row.map((v) => v.toFixed(2))),
+    text: textMatrix,
     texttemplate: "%{text}",
-    textfont: { size: 12 },
-    hovertemplate: "%{y} × %{x}<br>r = %{z:.3f}<extra></extra>",
-    colorbar: { tickfont: { color: "rgba(240,237,232,0.5)", size: 10 } },
+    textfont: { size: 12, color: "#f0ede8" },
+    hovertemplate: "%{y} × %{x}<br>Pearson r = %{text}<extra></extra>",
+    colorbar: {
+      title: { text: "r" } as Plotly.ColorBarTitle,
+      tickfont: { color: "rgba(240,237,232,0.7)", size: 11 },
+    },
   };
 
   return (

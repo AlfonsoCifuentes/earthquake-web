@@ -1,6 +1,6 @@
 "use client";
 /* components/maps/EventsMapInner.tsx — Client-only Leaflet implementation */
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo } from "react";
 import {
   MapContainer,
   TileLayer,
@@ -10,6 +10,7 @@ import {
 } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import type { Earthquake } from "@/lib/types";
+import { mapTiles } from "@/lib/mapConfig";
 
 /* ── Color helpers ─────────────────────────────────────── */
 function magColor(mag: number): string {
@@ -29,13 +30,13 @@ function FitBounds({ data }: { data: Earthquake[] }) {
   const map = useMap();
   useEffect(() => {
     if (!data.length) return;
-    // Don't auto-fit if global spread (it's a world map)
-    const lats = data.map((d) => d.latitude);
+    const lats = data.map((d) => d.latitude).filter((lat) => Number.isFinite(lat));
+    if (!lats.length) return;
     const latRange = Math.max(...lats) - Math.min(...lats);
     if (latRange < 30) {
       const minLat = Math.min(...lats);
       const maxLat = Math.max(...lats);
-      const lons = data.map((d) => d.longitude);
+      const lons = data.map((d) => d.longitude).filter((lon) => Number.isFinite(lon));
       const minLon = Math.min(...lons);
       const maxLon = Math.max(...lons);
       map.fitBounds(
@@ -50,14 +51,43 @@ function FitBounds({ data }: { data: Earthquake[] }) {
 interface Props {
   data: Earthquake[];
   height: number;
-  showHeat: boolean;
+  showHeat?: boolean;
 }
 
 export default function EventsMapInner({ data, height }: Props) {
-  const sample = data.slice(0, 3000); // cap for performance
+  // Validate points have finite coordinates in legal range
+  const validData = useMemo(() => {
+    return data.filter(
+      (eq) =>
+        eq &&
+        Number.isFinite(eq.latitude) &&
+        Number.isFinite(eq.longitude) &&
+        eq.latitude >= -90 &&
+        eq.latitude <= 90 &&
+        eq.longitude >= -180 &&
+        eq.longitude <= 180
+    );
+  }, [data]);
+
+  const maxPoints = 3000;
+  const isTruncated = validData.length > maxPoints;
+  const sample = useMemo(() => validData.slice(0, maxPoints), [validData]);
 
   return (
-    <div style={{ height, borderRadius: 16, overflow: "hidden" }}>
+    <div className="relative" style={{ height, borderRadius: 16, overflow: "hidden" }}>
+      {isTruncated && (
+        <div
+          className="absolute top-3 right-3 z-[1000] px-3 py-1.5 rounded-lg text-xs font-medium"
+          style={{
+            background: "rgba(6,6,8,0.85)",
+            backdropFilter: "blur(8px)",
+            border: "1px solid var(--border)",
+            color: "rgba(240,237,232,0.75)",
+          }}
+        >
+          Showing 3,000 of {validData.length.toLocaleString()} events (performance sampling)
+        </div>
+      )}
       <MapContainer
         center={[20, 0]}
         zoom={2}
@@ -66,10 +96,10 @@ export default function EventsMapInner({ data, height }: Props) {
         minZoom={1}
       >
         <TileLayer
-          url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/">CARTO</a>'
-          subdomains="abcd"
-          maxZoom={20}
+          url={mapTiles.url}
+          attribution={mapTiles.attribution}
+          subdomains={mapTiles.subdomains}
+          maxZoom={mapTiles.maxZoom}
         />
         <FitBounds data={sample} />
         {sample.map((eq) => (

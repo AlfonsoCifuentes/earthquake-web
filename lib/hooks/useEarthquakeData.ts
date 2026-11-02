@@ -48,10 +48,11 @@ export function usePredictions(minMag = 7.0) {
   });
 }
 
-export function useClusters(params: ClustersParams) {
+export function useClusters(params: ClustersParams, enabled = true) {
   return useQuery({
     queryKey: ["clusters", params],
     queryFn: () => fetchClusters(params),
     staleTime: 15 * 60 * 1000,
+    enabled,
   });
 }

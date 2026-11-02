@@ -3,17 +3,13 @@ import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 
-/* ── Seismograph SVG path ─────────────────────────── */
-const SEIS_PATH =
-  "M0,50 L30,50 L35,30 L40,70 L45,20 L50,80 L55,35 L60,65 L65,50 L80,50 L85,25 L90,75 L95,10 L100,90 L105,40 L110,60 L115,50 L130,50 L135,32 L140,68 L145,15 L150,85 L155,45 L160,55 L165,50 L180,50 L185,28 L190,72 L195,18 L200,82 L205,42 L210,58 L215,50 L240,50";
-
 type Particle = { id: number; left: string; delay: string; duration: string; size: string };
 
 const STATS = [
-  { value: "500+", label: "Major Events" },
-  { value: "20 yrs", label: "Historical Data" },
-  { value: "Real-time", label: "Live Monitoring" },
-  { value: "6.8K+", label: "Locations Tracked" },
+  { value: "9.7K+", label: "Historical M≥5.5 Events" },
+  { value: "20 yrs", label: "Catalog (2005–2025)" },
+  { value: "Real-time", label: "USGS Feed Monitoring" },
+  { value: "Global", label: "Worldwide Coverage" },
 ];
 
 export default function HeroSection() {
@@ -81,7 +77,7 @@ export default function HeroSection() {
   }, []);
 
   return (
-    <section className="relative h-screen w-full overflow-hidden flex items-center justify-center">
+    <section className="relative min-h-screen w-full overflow-hidden flex items-center justify-center">
       {/* ── Background Photo ────────────────────────── */}
       <div
         className="absolute inset-0 bg-cover bg-center bg-no-repeat"
@@ -91,8 +87,8 @@ export default function HeroSection() {
       />
 
       {/* ── Multi-layer gradient overlay ─────────────── */}
-      <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/40 to-black/90" />
-      <div className="absolute inset-0 bg-gradient-to-r from-black/50 via-transparent to-black/50" />
+      <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/50 to-black/95" />
+      <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-transparent to-black/60" />
       <div
         className="absolute inset-0"
         style={{
@@ -125,7 +121,7 @@ export default function HeroSection() {
       />
 
       {/* ── Main content ─────────────────────────────── */}
-      <div className="relative z-10 flex flex-col items-center text-center px-6 max-w-5xl mx-auto pb-32">
+      <div className="relative z-10 flex flex-col items-center text-center px-6 max-w-5xl mx-auto pt-16 pb-36">
         {/* Badge */}
         <motion.div
           initial={{ opacity: 0, y: -16 }}
@@ -145,7 +141,7 @@ export default function HeroSection() {
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
               <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
             </span>
-            Live Seismic Monitoring Active
+            USGS Global Feed Active
           </span>
         </motion.div>
 
@@ -171,53 +167,50 @@ export default function HeroSection() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.3 }}
           className="text-lg md:text-xl max-w-2xl leading-relaxed mb-12"
-          style={{ color: "rgba(240,237,232,0.65)" }}
+          style={{ color: "rgba(240,237,232,0.85)" }}
         >
-          20 years of global earthquake data. Real-time alerts. Predictive
-          modelling. Interactive maps and deep seismic analysis.
+          Explore global earthquake records, recent USGS activity and historical seismic patterns through interactive maps and data visualizations.
         </motion.p>
 
-        {/* CTA Button */}
+        {/* CTA Button — Valid single Link without nested button */}
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.7, delay: 0.45 }}
         >
-          <Link href="/dashboard">
-            <button
-              className="relative group px-10 py-4 rounded-2xl font-bold text-lg tracking-wide overflow-hidden transition-all duration-300"
-              style={{
-                background:
-                  "linear-gradient(135deg, var(--primary) 0%, #c94020 100%)",
-                color: "white",
-                fontFamily: "var(--font-space)",
-                boxShadow:
-                  "0 0 40px rgba(232,87,42,0.5), 0 8px 32px rgba(0,0,0,0.4)",
-              }}
-            >
-              <span className="relative z-10 flex items-center gap-3">
-                Explore the Atlas
-                <svg
-                  className="w-5 h-5 transition-transform group-hover:translate-x-1"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  strokeWidth={2.5}
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M13 7l5 5m0 0l-5 5m5-5H6"
-                  />
-                </svg>
-              </span>
-              {/* Hover shimmer */}
-              <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/15 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
-            </button>
+          <Link
+            href="/dashboard"
+            className="relative group inline-flex items-center gap-3 px-10 py-4 rounded-2xl font-bold text-lg tracking-wide overflow-hidden transition-all duration-300"
+            style={{
+              background:
+                "linear-gradient(135deg, var(--primary) 0%, #c94020 100%)",
+              color: "white",
+              fontFamily: "var(--font-space)",
+              boxShadow:
+                "0 0 40px rgba(232,87,42,0.5), 0 8px 32px rgba(0,0,0,0.4)",
+              textDecoration: "none",
+            }}
+          >
+            <span className="relative z-10 flex items-center gap-3">
+              Explore the Atlas
+              <svg
+                className="w-5 h-5 transition-transform group-hover:translate-x-1"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={2.5}
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M13 7l5 5m0 0l-5 5m5-5H6"
+                />
+              </svg>
+            </span>
+            {/* Hover shimmer */}
+            <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/15 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
           </Link>
         </motion.div>
-
-
       </div>
 
       {/* ── Stats bar ─────────────────────────────────── */}
@@ -227,9 +220,9 @@ export default function HeroSection() {
         transition={{ duration: 0.8, delay: 0.7 }}
         className="absolute bottom-0 left-0 right-0"
         style={{
-          background: "rgba(6,6,8,0.85)",
+          background: "rgba(6,6,8,0.9)",
           backdropFilter: "blur(20px)",
-          borderTop: "1px solid rgba(255,255,255,0.06)",
+          borderTop: "1px solid rgba(255,255,255,0.08)",
         }}
       >
         <div className="max-w-5xl mx-auto px-6 py-5 flex items-center justify-between flex-wrap gap-4">
@@ -245,8 +238,8 @@ export default function HeroSection() {
                 {s.value}
               </span>
               <span
-                className="text-xs tracking-widest uppercase mt-0.5"
-                style={{ color: "var(--text-muted)" }}
+                className="text-xs tracking-widest uppercase mt-0.5 text-center"
+                style={{ color: "rgba(240,237,232,0.65)" }}
               >
                 {s.label}
               </span>
@@ -256,9 +249,9 @@ export default function HeroSection() {
             className="hidden md:block h-8 w-px"
             style={{ background: "var(--border)" }}
           />
-          <div className="text-xs" style={{ color: "var(--text-muted)" }}>
-            Data from{" "}
-            <span style={{ color: "var(--accent)" }}>USGS · EMSC</span>
+          <div className="text-xs" style={{ color: "rgba(240,237,232,0.65)" }}>
+            Data verified from{" "}
+            <span style={{ color: "var(--accent)" }}>USGS Earthquake Hazards Program</span>
           </div>
         </div>
       </motion.div>

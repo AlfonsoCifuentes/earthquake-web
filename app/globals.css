@@ -5,21 +5,21 @@
   --bg: #060608;
   --bg-2: #0d0d12;
   --bg-card: rgba(255, 255, 255, 0.035);
-  --border: rgba(255, 255, 255, 0.07);
+  --border: rgba(255, 255, 255, 0.08);
   --border-hot: rgba(232, 87, 42, 0.35);
   --primary: #e8572a;
   --primary-glow: rgba(232, 87, 42, 0.35);
   --accent: #00d4ff;
   --accent-glow: rgba(0, 212, 255, 0.25);
   --text: #f0ede8;
-  --text-muted: rgba(240, 237, 232, 0.45);
+  --text-muted: rgba(240, 237, 232, 0.70);
   --red-quake: #ff3b30;
   --orange-quake: #ff9500;
   --green-quake: #30d158;
   --blue-quake: #0a84ff;
-  --font-head: "Space Grotesk", "Helvetica Neue", sans-serif;
-  --font-body: "Inter", "Helvetica Neue", sans-serif;
-  --font-mono: "JetBrains Mono", "Fira Code", monospace;
+  --font-head: var(--font-space), "Space Grotesk", "Helvetica Neue", sans-serif;
+  --font-body: var(--font-inter), "Inter", "Helvetica Neue", sans-serif;
+  --font-mono: var(--font-mono), "JetBrains Mono", "Fira Code", monospace;
 }
 
 /* ─── Base Reset ───────────────────────────────────────────────── */
@@ -164,7 +164,7 @@ body {
   background: transparent !important;
 }
 .js-plotly-plot .plotly .modebar {
-  background: rgba(6,6,8,0.8) !important;
+  background: rgba(6,6,8,0.85) !important;
   border-radius: 8px !important;
 }
 
@@ -237,7 +237,6 @@ input[type="range"]::-moz-range-thumb {
   text-transform: uppercase;
   font-size: 0.7rem;
   border-bottom: 1px solid var(--border-hot);
-  cursor: pointer;
   user-select: none;
 }
 .data-table th:hover { background: rgba(232,87,42,0.2); }
@@ -282,29 +281,4 @@ input[type="range"]::-moz-range-thumb {
 /* ─── Responsive ───────────────────────────────────────────────── */
 @media (max-width: 768px) {
   .glass, .glass-hot { border-radius: 12px; }
-}
-
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
 }

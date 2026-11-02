@@ -1,5 +1,6 @@
 "use client";
 /* components/charts/HourlyHeatmap.tsx */
+import { useMemo } from "react";
 import PlotlyChart from "./PlotlyChart";
 import type { Earthquake } from "@/lib/types";
 
@@ -9,16 +10,19 @@ const HOURS = Array.from({ length: 24 }, (_, i) =>
 );
 
 export default function HourlyHeatmap({ data }: { data: Earthquake[] }) {
-  // 24×7 matrix: [hour][day]
-  const matrix: number[][] = Array.from({ length: 24 }, () =>
-    Array(7).fill(0)
-  );
-  for (const eq of data) {
-    const d = new Date(eq.time);
-    const hour = d.getUTCHours();
-    const dow = (d.getUTCDay() + 6) % 7;
-    matrix[hour][dow]++;
-  }
+  const matrix: number[][] = useMemo(() => {
+    // 24×7 matrix: [hour][day]
+    const m = Array.from({ length: 24 }, () => Array(7).fill(0));
+    for (const eq of data) {
+      if (!eq.time) continue;
+      const d = new Date(eq.time);
+      if (isNaN(d.getTime())) continue;
+      const hour = d.getUTCHours();
+      const dow = (d.getUTCDay() + 6) % 7;
+      m[hour][dow]++;
+    }
+    return m;
+  }, [data]);
 
   const trace: Plotly.Data = {
     z: matrix,
@@ -31,15 +35,18 @@ export default function HourlyHeatmap({ data }: { data: Earthquake[] }) {
       [0.6, "#e8572a"],
       [1, "#ffdb6e"],
     ],
-    hovertemplate: "%{y} %{x}: %{z} events<extra></extra>",
-    colorbar: { tickfont: { color: "rgba(240,237,232,0.5)", size: 10 } },
+    hovertemplate: "%{y} %{x}: %{z} events (UTC)<extra></extra>",
+    colorbar: {
+      title: { text: "Events" } as Plotly.ColorBarTitle,
+      tickfont: { color: "rgba(240,237,232,0.7)", size: 11 },
+    },
   };
 
   return (
     <PlotlyChart
       data={[trace]}
       layout={{
-        xaxis: { title: { text: "Day" } },
+        xaxis: { title: { text: "Day of Week (UTC)" } },
         yaxis: { title: { text: "Hour (UTC)" }, autorange: "reversed" },
       }}
       height={480}

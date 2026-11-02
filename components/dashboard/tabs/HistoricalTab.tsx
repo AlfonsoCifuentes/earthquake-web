@@ -13,15 +13,16 @@ import Scatter3D from "@/components/charts/Scatter3D";
 import MagDepthScatter from "@/components/charts/MagDepthScatter";
 import RiskForecastMap from "@/components/maps/RiskForecastMap";
 import EventsMap from "@/components/maps/EventsMap";
+import { formatProbability } from "@/lib/format";
 import type { Earthquake } from "@/lib/types";
 
 type SubTab = "overview" | "distribution" | "patterns" | "recurrence";
 
 const SUB_TABS: { id: SubTab; label: string }[] = [
-  { id: "overview",     label: "Overview" },
+  { id: "overview", label: "Overview" },
   { id: "distribution", label: "Global Distribution" },
-  { id: "patterns",     label: "Time Patterns" },
-  { id: "recurrence",   label: "Recurrence" },
+  { id: "patterns", label: "Time Patterns" },
+  { id: "recurrence", label: "Recurrence (Poisson)" },
 ];
 
 function SubTabBtn({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
@@ -31,7 +32,7 @@ function SubTabBtn({ label, active, onClick }: { label: string; active: boolean;
       className="px-4 py-2 rounded-xl text-sm font-medium transition-all"
       style={{
         background: active ? "rgba(0,212,255,0.15)" : "rgba(255,255,255,0.04)",
-        color: active ? "#00d4ff" : "rgba(240,237,232,0.45)",
+        color: active ? "#00d4ff" : "rgba(240,237,232,0.6)",
         border: active ? "1px solid rgba(0,212,255,0.3)" : "1px solid var(--border)",
         cursor: "pointer",
       }}
@@ -44,7 +45,7 @@ function SubTabBtn({ label, active, onClick }: { label: string; active: boolean;
 function CardWrap({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="glass rounded-2xl p-5" style={{ border: "1px solid var(--border)" }}>
-      <h3 className="text-sm font-semibold mb-4" style={{ color: "rgba(240,237,232,0.5)" }}>
+      <h3 className="text-sm font-semibold mb-4" style={{ color: "rgba(240,237,232,0.7)" }}>
         {title}
       </h3>
       {children}
@@ -63,11 +64,14 @@ export default function HistoricalTab() {
     max_depth: maxDepth,
     start_date: startDate,
     end_date: endDate,
-    region: regions[0],
+    regions: regions.length > 0 ? regions : undefined,
     limit: 10000,
   });
 
-  const { data: predictions, isLoading: predLoading } = usePredictions();
+  const isRecurrenceActive = subTab === "recurrence";
+  const { data: predictions, isLoading: predLoading } = usePredictions(
+    Math.max(minMag, 5.5)
+  );
 
   const events: Earthquake[] = raw?.data ?? [];
 
@@ -96,7 +100,7 @@ export default function HistoricalTab() {
             </div>
           ) : (
             <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
-              <MetricCard label="Total Historical" value={events.length} icon="◎" color="#00d4ff" />
+              <MetricCard label="Total Historical (M≥5.5)" value={events.length} icon="◎" color="#00d4ff" />
               <MetricCard
                 label="Avg Magnitude"
                 value={events.length ? events.reduce((s, e) => s + e.mag, 0) / events.length : 0}
@@ -123,10 +127,10 @@ export default function HistoricalTab() {
           )}
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-            <CardWrap title="Magnitude Distribution">
+            <CardWrap title="Magnitude Distribution (M≥5.5)">
               {isLoading ? <ChartSkeleton height={320} /> : <MagnitudePie data={events} />}
             </CardWrap>
-            <CardWrap title="Top Tectonic Regions">
+            <CardWrap title="Top Named Locations">
               {isLoading ? <ChartSkeleton height={320} /> : <TopRegionsBar data={events} />}
             </CardWrap>
           </div>
@@ -134,8 +138,8 @@ export default function HistoricalTab() {
           {/* Stats card */}
           {raw?.stats && !isLoading && (
             <div className="glass rounded-2xl p-5" style={{ border: "1px solid var(--border)" }}>
-              <h3 className="text-sm font-semibold mb-4" style={{ color: "rgba(240,237,232,0.5)" }}>
-                Regional Distribution
+              <h3 className="text-sm font-semibold mb-4" style={{ color: "rgba(240,237,232,0.7)" }}>
+                Regional Event Distribution
               </h3>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 {Object.entries(raw.stats.region_counts ?? {}).map(([region, count]) => (
@@ -144,7 +148,7 @@ export default function HistoricalTab() {
                     className="rounded-xl p-4 text-center"
                     style={{ background: "rgba(0,212,255,0.06)", border: "1px solid rgba(0,212,255,0.15)" }}
                   >
-                    <p className="text-xs mb-2" style={{ color: "rgba(240,237,232,0.35)" }}>
+                    <p className="text-xs mb-2" style={{ color: "rgba(240,237,232,0.6)" }}>
                       {region}
                     </p>
                     <p className="text-xl font-bold" style={{ color: "#00d4ff" }}>
@@ -168,13 +172,13 @@ export default function HistoricalTab() {
               <EventsMap data={events} height={520} />
             )}
             <div className="px-5 py-3">
-              <p className="text-xs" style={{ color: "rgba(240,237,232,0.35)" }}>
-                {events.length.toLocaleString()} historical events (2005–2025) — color-coded by magnitude
+              <p className="text-xs" style={{ color: "rgba(240,237,232,0.6)" }}>
+                {events.length.toLocaleString()} historical events (2005–2025, M≥5.5) — size &amp; color-coded by magnitude
               </p>
             </div>
           </div>
 
-          <CardWrap title="Tectonic Region Event Count">
+          <CardWrap title="Top Named Locations by Event Count">
             {isLoading ? <ChartSkeleton height={340} /> : <TopRegionsBar data={events} />}
           </CardWrap>
         </div>
@@ -186,7 +190,7 @@ export default function HistoricalTab() {
           <CardWrap title="Daily Evolution (2005–2025)">
             {isLoading ? <ChartSkeleton height={360} /> : <TimeSeriesBar data={events} />}
           </CardWrap>
-          <CardWrap title="Hourly Patterns">
+          <CardWrap title="Hourly Activity Patterns (UTC)">
             {isLoading ? <ChartSkeleton height={500} /> : <HourlyHeatmap data={events} />}
           </CardWrap>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
@@ -200,13 +204,25 @@ export default function HistoricalTab() {
         </div>
       )}
 
-      {/* --- Recurrence --- */}
+      {/* --- Recurrence (Poisson Model) --- */}
       {subTab === "recurrence" && (
         <div className="flex flex-col gap-5">
+          {/* Scientific Disclaimer */}
+          <div
+            className="rounded-2xl p-4 text-xs leading-relaxed"
+            style={{
+              background: "rgba(0, 212, 255, 0.08)",
+              border: "1px solid rgba(0, 212, 255, 0.25)",
+              color: "rgba(240, 237, 232, 0.85)",
+            }}
+          >
+            <strong style={{ color: "#00d4ff" }}>Scientific Note on Recurrence:</strong> Illustrative Poisson recurrence model based on 2005–2025 historical records (M≥5.5). This is <strong>not</strong> an earthquake prediction or official hazard assessment. The Poisson model assumes seismic events occur independently at a constant average regional rate; past intervals do not predict future event dates or epicenters.
+          </div>
+
           {/* Predictions table */}
           <div className="glass rounded-2xl p-5" style={{ border: "1px solid var(--border)" }}>
-            <h3 className="text-sm font-semibold mb-4" style={{ color: "rgba(240,237,232,0.5)" }}>
-              Poisson Recurrence Analysis by Region
+            <h3 className="text-sm font-semibold mb-4" style={{ color: "rgba(240,237,232,0.7)" }}>
+              Historical Event Recurrence Analysis by Region
             </h3>
             {predLoading ? (
               <ChartSkeleton height={240} />
@@ -217,60 +233,66 @@ export default function HistoricalTab() {
                     <tr>
                       <th>Region</th>
                       <th>Events/yr</th>
-                      <th>Recurrence</th>
-                      <th>Prob 1yr</th>
-                      <th>Prob 5yr</th>
-                      <th>Next Estimated</th>
-                      <th>Risk</th>
+                      <th>Mean Interval</th>
+                      <th>1-Yr Prob (Poisson)</th>
+                      <th>5-Yr Prob (Poisson)</th>
+                      <th>Last Recorded Event</th>
+                      <th>Frequency Band</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {(predictions?.predictions ?? []).map((p) => (
-                      <tr key={p.region}>
-                        <td>{p.region}</td>
-                        <td>{p.events_per_year.toFixed(2)}</td>
-                        <td>{p.recurrence_months != null ? p.recurrence_months.toFixed(1) : "—"} mo</td>
-                        <td>
-                          <span style={{ color: `var(--alert-${p.risk_color === "green" ? "low" : p.risk_color === "yellow" ? "moderate" : p.risk_color === "orange" ? "high" : "critical"})` }}>
-                            {(p.prob_1yr * 100).toFixed(1)}%
-                          </span>
-                        </td>
-                        <td>{(p.prob_5yr * 100).toFixed(1)}%</td>
-                        <td style={{ fontFamily: "var(--font-mono)", fontSize: 11 }}>
-                          {p.next_estimated}
-                        </td>
-                        <td>
-                          <span
-                            className="inline-flex px-2 py-0.5 rounded-md text-xs font-semibold"
-                            style={{
-                              background: `rgba(var(--alert-${p.risk_color}),0.12)`,
-                              color:
-                                p.risk_color === "red" ? "#ff3b30"
-                                : p.risk_color === "orange" ? "#ff9500"
-                                : p.risk_color === "yellow" ? "#ffd60a"
-                                : "#30d158",
-                              textTransform: "uppercase",
-                            }}
-                          >
-                            {p.risk_color}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
+                    {(predictions?.predictions ?? []).map((p) => {
+                      const level = p.risk_level || p.risk_color || "low";
+                      const color =
+                        level === "critical" ? "#ff3b30" :
+                        level === "high" ? "#ff9500" :
+                        level === "moderate" ? "#ffd60a" :
+                        "#30d158";
+
+                      return (
+                        <tr key={p.region}>
+                          <td className="font-medium" style={{ color: "var(--text)" }}>{p.region}</td>
+                          <td>{p.events_per_year.toFixed(2)}</td>
+                          <td>{p.recurrence_months != null ? `${p.recurrence_months.toFixed(1)} mo` : "—"}</td>
+                          <td>
+                            <span style={{ color, fontWeight: 700 }}>
+                              {formatProbability(p.prob_1yr)}
+                            </span>
+                          </td>
+                          <td>{formatProbability(p.prob_5yr)}</td>
+                          <td style={{ fontFamily: "var(--font-mono)", fontSize: 11 }}>
+                            {p.last_event_date || "—"}
+                          </td>
+                          <td>
+                            <span
+                              className="inline-flex px-2 py-0.5 rounded-md text-xs font-semibold"
+                              style={{
+                                background: `${color}20`,
+                                color: color,
+                                border: `1px solid ${color}40`,
+                                textTransform: "uppercase",
+                              }}
+                            >
+                              {level}
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
             )}
           </div>
 
-          {/* Risk map */}
+          {/* Recurrence map */}
           <div className="glass rounded-2xl overflow-hidden" style={{ border: "1px solid var(--border)" }}>
             <div className="px-5 pt-4 pb-2">
-              <h3 className="text-sm font-semibold" style={{ color: "rgba(240,237,232,0.5)" }}>
-                Risk Forecast Map
+              <h3 className="text-sm font-semibold" style={{ color: "rgba(240,237,232,0.7)" }}>
+                Historical Recurrence Overview
               </h3>
-              <p className="text-xs mt-1" style={{ color: "rgba(240,237,232,0.25)" }}>
-                Circle color/size = Poisson 1-year probability
+              <p className="text-xs mt-1" style={{ color: "rgba(240,237,232,0.5)" }}>
+                Circle color &amp; radius represent Poisson 1-year event recurrence probability across tectonic domains
               </p>
             </div>
             {predLoading ? (

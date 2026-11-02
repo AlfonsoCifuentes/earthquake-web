@@ -10,17 +10,17 @@ import type { Alert } from "@/lib/types";
 type FeedType = "significant_week" | "m4.5_day" | "m2.5_hour";
 
 const FEED_OPTIONS: { id: FeedType; label: string; desc: string }[] = [
-  { id: "significant_week", label: "Significant (week)",  desc: "Notable events past 7 days" },
-  { id: "m4.5_day",         label: "M4.5+ (24h)",         desc: "M≥4.5 past 24 hours" },
-  { id: "m2.5_hour",        label: "M2.5+ (1h)",          desc: "M≥2.5 past hour" },
+  { id: "significant_week", label: "Significant (week)", desc: "Notable USGS events past 7 days" },
+  { id: "m4.5_day", label: "M4.5+ (24h)", desc: "M≥4.5 global events past 24 hours" },
+  { id: "m2.5_hour", label: "M2.5+ (1h)", desc: "M≥2.5 events past hour" },
 ];
 
 function alertVariant(level: string): Parameters<typeof Badge>[0]["variant"] {
   switch (level) {
     case "critical": return "critical";
-    case "high":     return "high";
+    case "high": return "high";
     case "moderate": return "moderate";
-    default:         return "low";
+    default: return "low";
   }
 }
 
@@ -61,7 +61,7 @@ function AlertRow({ alert }: { alert: Alert }) {
 
       {/* Info */}
       <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 mb-1">
+        <div className="flex items-center gap-2 mb-1 flex-wrap">
           <span
             className="font-semibold text-sm truncate"
             style={{ color: "var(--text)" }}
@@ -69,18 +69,28 @@ function AlertRow({ alert }: { alert: Alert }) {
             {alert.place}
           </span>
           <Badge variant={alertVariant(alert.alert)}>
-            {alert.alert}
+            {alert.alert.toUpperCase()} (M{alert.mag >= 7 ? "7+" : alert.mag >= 6 ? "6–7" : alert.mag >= 5 ? "5–6" : "<5"})
           </Badge>
           {alert.tsunami === 1 && (
-            <Badge variant="critical">TSUNAMI</Badge>
+            <span
+              title="USGS oceanic event evaluation flag; not an active coastal evacuation warning"
+              className="inline-flex px-2 py-0.5 rounded text-[10px] font-bold tracking-wider"
+              style={{
+                background: "rgba(255, 59, 48, 0.2)",
+                color: "#ff3b30",
+                border: "1px solid rgba(255, 59, 48, 0.4)",
+              }}
+            >
+              TSUNAMI EVAL FLAG
+            </span>
           )}
         </div>
-        <div className="flex flex-wrap gap-4 text-xs" style={{ color: "rgba(240,237,232,0.4)" }}>
+        <div className="flex flex-wrap gap-4 text-xs" style={{ color: "rgba(240,237,232,0.6)" }}>
           <span>{alert.time?.slice(0, 19).replace("T", " ")} UTC</span>
-          <span>{alert.depth?.toFixed(1)} km depth</span>
-          {alert.felt && <span>{alert.felt.toLocaleString()} felt reports</span>}
-          {alert.cdi && <span>CDI {alert.cdi.toFixed(1)}</span>}
-          <span>{alert.age_hours.toFixed(1)}h ago</span>
+          <span>{alert.depth != null ? `${alert.depth.toFixed(1)} km depth` : "Depth N/A"}</span>
+          {alert.felt != null && <span>{alert.felt.toLocaleString()} felt reports</span>}
+          {alert.cdi != null && <span>CDI {alert.cdi.toFixed(1)}</span>}
+          <span>{alert.age_hours < 1 ? "Just now" : `${alert.age_hours.toFixed(1)}h ago`}</span>
         </div>
       </div>
     </div>
@@ -100,10 +110,23 @@ export default function AlertsTab() {
     latitude: a.latitude,
     longitude: a.longitude,
     place: a.place,
+    type: "earthquake",
   }));
 
   return (
     <div className="flex flex-col gap-5">
+      {/* Notice on alerts */}
+      <div
+        className="rounded-xl px-4 py-3 text-xs leading-relaxed"
+        style={{
+          background: "rgba(232, 87, 42, 0.08)",
+          border: "1px solid rgba(232, 87, 42, 0.25)",
+          color: "rgba(240, 237, 232, 0.8)",
+        }}
+      >
+        <strong style={{ color: "var(--primary)" }}>USGS Feed Monitoring:</strong> Displays official USGS rolling feeds with preset temporal windows. Alert levels (Critical, High, Moderate, Low) represent <strong>magnitude brackets</strong>, not official USGS PAGER loss levels. Tsunami flags indicate ocean events evaluated by tsunami warning centers.
+      </div>
+
       {/* Feed selector */}
       <div className="flex gap-3 flex-wrap">
         {FEED_OPTIONS.map((f) => (
@@ -113,7 +136,7 @@ export default function AlertsTab() {
             className="px-4 py-2 rounded-xl text-sm font-medium transition-all"
             style={{
               background: feed === f.id ? "rgba(232,87,42,0.2)" : "rgba(255,255,255,0.04)",
-              color: feed === f.id ? "var(--primary)" : "rgba(240,237,232,0.45)",
+              color: feed === f.id ? "var(--primary)" : "rgba(240,237,232,0.6)",
               border: feed === f.id ? "1px solid rgba(232,87,42,0.35)" : "1px solid var(--border)",
               cursor: "pointer",
             }}
@@ -125,19 +148,19 @@ export default function AlertsTab() {
 
       {/* Summary stats */}
       {data?.summary && (
-        <div className="grid grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {[
-            { label: "Critical", count: data.summary.critical, color: "#ff3b30" },
-            { label: "High",     count: data.summary.high,     color: "#ff9500" },
-            { label: "Moderate", count: data.summary.moderate, color: "#ffd60a" },
-            { label: "Low",      count: data.summary.low,      color: "#30d158" },
+            { label: "Critical (M7+)", count: data.summary.critical, color: "#ff3b30" },
+            { label: "High (M6+)", count: data.summary.high, color: "#ff9500" },
+            { label: "Moderate (M5+)", count: data.summary.moderate, color: "#ffd60a" },
+            { label: "Low (<M5)", count: data.summary.low, color: "#30d158" },
           ].map((s) => (
             <div
               key={s.label}
               className="glass rounded-xl p-4 text-center"
               style={{ border: "1px solid var(--border)" }}
             >
-              <p className="text-xs mb-1" style={{ color: "rgba(240,237,232,0.35)" }}>
+              <p className="text-xs mb-1" style={{ color: "rgba(240,237,232,0.6)" }}>
                 {s.label}
               </p>
               <p className="text-2xl font-bold" style={{ color: s.color }}>
@@ -152,7 +175,7 @@ export default function AlertsTab() {
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
         {/* Alert list */}
         <div className="glass rounded-2xl p-5" style={{ border: "1px solid var(--border)", maxHeight: 560, overflowY: "auto" }}>
-          <h3 className="text-sm font-semibold mb-4" style={{ color: "rgba(240,237,232,0.5)" }}>
+          <h3 className="text-sm font-semibold mb-4" style={{ color: "rgba(240,237,232,0.7)" }}>
             {FEED_OPTIONS.find((f) => f.id === feed)?.desc} — {alerts.length} events
           </h3>
           {isLoading ? (
@@ -162,7 +185,7 @@ export default function AlertsTab() {
               ))}
             </div>
           ) : alerts.length === 0 ? (
-            <p style={{ color: "rgba(240,237,232,0.3)", fontSize: 14 }}>No events in this feed.</p>
+            <p style={{ color: "rgba(240,237,232,0.5)", fontSize: 14 }}>No events in this feed window.</p>
           ) : (
             alerts.map((a) => <AlertRow key={a.id} alert={a} />)
           )}
@@ -173,7 +196,7 @@ export default function AlertsTab() {
           {isLoading ? (
             <MapSkeleton height={520} />
           ) : (
-            <EventsMap data={alertsAsEq as Parameters<typeof EventsMap>[0]["data"]} height={520} />
+            <EventsMap data={alertsAsEq} height={520} />
           )}
         </div>
       </div>

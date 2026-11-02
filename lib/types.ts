@@ -29,12 +29,28 @@ export interface EarthquakeStats {
 export interface RealtimeResponse {
   count: number;
   source: string;
+  fetched_at?: string;
+  stale?: boolean;
+  warning?: string | null;
+  coverage?: {
+    kind: string;
+    start: string | null;
+    end: string | null;
+    minimum_magnitude: number;
+    maximum_magnitude?: number;
+  };
   data: Earthquake[];
 }
 
 export interface HistoricalResponse {
   stats: EarthquakeStats;
   data: Earthquake[];
+  coverage?: {
+    dataset: string;
+    start: string;
+    end: string;
+    minimum_magnitude: number;
+  };
 }
 
 export interface Alert extends Earthquake {
@@ -49,8 +65,15 @@ export interface Alert extends Earthquake {
 
 export interface AlertsResponse {
   feed: string;
+  source?: string;
   count: number;
-  summary: Record<string, number>;
+  disclaimer?: string;
+  summary: {
+    critical: number;
+    high: number;
+    moderate: number;
+    low: number;
+  };
   data: Alert[];
 }
 
@@ -63,7 +86,8 @@ export interface Prediction {
   prob_1yr: number;
   prob_5yr: number;
   last_event_date: string | null;
-  next_estimated: string | null;
+  next_estimated?: string | null;
+  risk_level?: "critical" | "high" | "moderate" | "low" | string;
   risk_color: string;
   lat: number;
   lon: number;
@@ -71,6 +95,9 @@ export interface Prediction {
 
 export interface PredictionsResponse {
   min_mag: number;
+  catalog_coverage_years?: number;
+  model?: string;
+  disclaimer?: string;
   predictions: Prediction[];
 }
 
@@ -91,6 +118,9 @@ export interface ClustersResponse {
   n_clusters: number;
   n_noise: number;
   n_points: number;
+  eps_km?: number;
+  min_samples?: number;
+  metric?: string;
   centroids: ClusterCentroid[];
   data: ClusterPoint[];
 }

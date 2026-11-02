@@ -14,11 +14,11 @@ function CardWrap({ title, subtitle, children }: { title: string; subtitle?: str
   return (
     <div className="glass rounded-2xl p-5" style={{ border: "1px solid var(--border)" }}>
       <div className="mb-4">
-        <h3 className="text-sm font-semibold" style={{ color: "rgba(240,237,232,0.5)" }}>
+        <h3 className="text-sm font-semibold" style={{ color: "rgba(240,237,232,0.7)" }}>
           {title}
         </h3>
         {subtitle && (
-          <p className="text-xs mt-1" style={{ color: "rgba(240,237,232,0.25)" }}>
+          <p className="text-xs mt-1" style={{ color: "rgba(240,237,232,0.45)" }}>
             {subtitle}
           </p>
         )}
@@ -37,7 +37,7 @@ export default function AdvancedTab() {
     max_depth: maxDepth,
     start_date: startDate,
     end_date: endDate,
-    region: regions[0],
+    regions: regions.length > 0 ? regions : undefined,
     limit: 8000,
   });
 
@@ -55,6 +55,19 @@ export default function AdvancedTab() {
 
   return (
     <div className="flex flex-col gap-5">
+      {/* Notice on dataset */}
+      <div
+        className="rounded-xl px-4 py-2.5 text-xs flex items-center justify-between"
+        style={{
+          background: "rgba(255, 255, 255, 0.03)",
+          border: "1px solid var(--border)",
+          color: "rgba(240, 237, 232, 0.65)",
+        }}
+      >
+        <span>Historical Catalog Analysis (2005–2025, M≥5.5)</span>
+        <span>{events.length.toLocaleString()} matching events</span>
+      </div>
+
       {/* Row 1: correlation + pie */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         <CardWrap
@@ -73,12 +86,12 @@ export default function AdvancedTab() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         <CardWrap
           title="Magnitude vs Depth Regression"
-          subtitle="Linear regression trend line"
+          subtitle="Ordinary least squares trend line (M vs Depth)"
         >
           <RegressionScatter data={events} />
         </CardWrap>
 
-        <CardWrap title="Top Regions by Event Count">
+        <CardWrap title="Top Named Locations by Event Count">
           <TopRegionsBar data={events} />
         </CardWrap>
       </div>
@@ -91,16 +104,16 @@ export default function AdvancedTab() {
         >
           <h3
             className="text-sm font-semibold mb-4"
-            style={{ color: "rgba(240,237,232,0.5)" }}
+            style={{ color: "rgba(240,237,232,0.7)" }}
           >
             Statistical Summary
           </h3>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             {[
-              { label: "Avg Magnitude", value: raw.stats.avg_mag?.toFixed(2) },
-              { label: "Max Magnitude", value: raw.stats.max_mag?.toFixed(1) },
-              { label: "Avg Depth", value: `${raw.stats.avg_depth?.toFixed(1)} km` },
-              { label: "Events", value: raw.stats.total?.toLocaleString() },
+              { label: "Avg Magnitude", value: raw.stats.total ? raw.stats.avg_mag?.toFixed(2) : "—" },
+              { label: "Max Magnitude", value: raw.stats.total ? raw.stats.max_mag?.toFixed(1) : "—" },
+              { label: "Avg Depth", value: raw.stats.total ? `${raw.stats.avg_depth?.toFixed(1)} km` : "—" },
+              { label: "Events", value: raw.stats.total?.toLocaleString() ?? "0" },
             ].map((item) => (
               <div
                 key={item.label}
@@ -110,7 +123,7 @@ export default function AdvancedTab() {
                   border: "1px solid rgba(232,87,42,0.15)",
                 }}
               >
-                <p className="text-xs mb-1" style={{ color: "rgba(240,237,232,0.35)" }}>
+                <p className="text-xs mb-1" style={{ color: "rgba(240,237,232,0.6)" }}>
                   {item.label}
                 </p>
                 <p className="text-lg font-bold" style={{ color: "var(--primary)" }}>

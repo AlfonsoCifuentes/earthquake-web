@@ -24,11 +24,11 @@ const jetbrainsMono = JetBrains_Mono({
 export const metadata: Metadata = {
   title: "Seismic Atlas — Global Earthquake Analysis",
   description:
-    "Real-time and historical earthquake analysis. 20 years of seismic data, interactive maps, predictive modelling and live alerts.",
-  keywords: ["earthquake", "seismic", "USGS", "analysis", "prediction", "geology"],
+    "Explore global earthquake records, recent USGS activity and historical seismic patterns through interactive maps and data visualizations.",
+  keywords: ["earthquake", "seismic", "USGS", "geology", "spatial analysis", "geophysics"],
   openGraph: {
-    title: "Seismic Atlas",
-    description: "Real-time global earthquake analysis and prediction platform.",
+    title: "Seismic Atlas — Global Earthquake Analysis",
+    description: "Explore global earthquake records, recent USGS activity and historical seismic patterns through interactive maps and data visualizations.",
     type: "website",
   },
 };

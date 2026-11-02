@@ -39,33 +39,69 @@ function SubTabBtn({
 
 export default function GeographicTab() {
   const [subTab, setSubTab] = useState<SubTab>("events");
-  const [eps, setEps] = useState(2.5);
-  const [minSamples, setMinSamples] = useState(5);
+  const [sliderEpsKm, setSliderEpsKm] = useState(150);
+  const [sliderMinSamples, setSliderMinSamples] = useState(5);
 
-  const { minMag, maxMag, minDepth, maxDepth } = useFilters();
-  const { data: raw, isLoading } = useRealtimeData({ min_mag: minMag, max_mag: maxMag, limit: 8000 });
-  const { data: clusters, isLoading: clustersLoading, refetch: refetchClusters } = useClusters({
-    eps,
-    min_samples: minSamples,
-    min_mag: minMag,
-    limit: 3000,
+  // Active query parameters (updated on clicking Run DBSCAN)
+  const [activeParams, setActiveParams] = useState({
+    epsKm: 150,
+    minSamples: 5,
   });
+
+  const { minMag, maxMag, minDepth, maxDepth, startDate, endDate } = useFilters();
+  const { data: raw, isLoading } = useRealtimeData({
+    min_mag: minMag,
+    max_mag: maxMag,
+    limit: 8000,
+  });
+
+  // Only query clusters when user switches to the clusters sub-tab
+  const isClusterActive = subTab === "clusters";
+  const {
+    data: clusters,
+    isLoading: clustersLoading,
+    isFetching: clustersFetching,
+    refetch: refetchClusters,
+  } = useClusters(
+    {
+      eps_km: activeParams.epsKm,
+      min_samples: activeParams.minSamples,
+      min_mag: Math.max(minMag, 5.5),
+      limit: 3000,
+    },
+    isClusterActive
+  );
 
   const events: Earthquake[] = useMemo(() => {
     if (!raw?.data) return [];
-    return raw.data.filter((e) => e.depth >= minDepth && e.depth <= maxDepth);
-  }, [raw, minDepth, maxDepth]);
+    return raw.data.filter((e) => {
+      if (e.depth < minDepth || e.depth > maxDepth) return false;
+      if (startDate && e.time && e.time.slice(0, 10) < startDate) return false;
+      if (endDate && e.time && e.time.slice(0, 10) > endDate) return false;
+      return true;
+    });
+  }, [raw, minDepth, maxDepth, startDate, endDate]);
+
+  const handleRunDBSCAN = () => {
+    setActiveParams({
+      epsKm: sliderEpsKm,
+      minSamples: sliderMinSamples,
+    });
+    setTimeout(() => {
+      refetchClusters();
+    }, 0);
+  };
 
   return (
     <div className="flex flex-col gap-5">
       {/* Sub-tabs */}
       <div className="flex gap-2">
-        <SubTabBtn label="Events Map"   active={subTab === "events"}   onClick={() => setSubTab("events")} />
-        <SubTabBtn label="Heat Map"     active={subTab === "heat"}     onClick={() => setSubTab("heat")} />
+        <SubTabBtn label="Events Map" active={subTab === "events"} onClick={() => setSubTab("events")} />
+        <SubTabBtn label="Heat Map" active={subTab === "heat"} onClick={() => setSubTab("heat")} />
         <SubTabBtn label="Cluster Analysis" active={subTab === "clusters"} onClick={() => setSubTab("clusters")} />
       </div>
 
-      {/* Content */}
+      {/* Content: Events */}
       {subTab === "events" && (
         <div className="glass rounded-2xl overflow-hidden" style={{ border: "1px solid var(--border)" }}>
           {isLoading ? (
@@ -73,21 +109,22 @@ export default function GeographicTab() {
           ) : (
             <EventsMap data={events} height={520} />
           )}
-          <div className="px-5 py-3 flex items-center justify-between">
-            <p className="text-xs" style={{ color: "rgba(240,237,232,0.4)" }}>
-              {events.length.toLocaleString()} events — CircleMarker size/color by magnitude
+          <div className="px-5 py-3 flex flex-wrap items-center justify-between gap-2">
+            <p className="text-xs" style={{ color: "rgba(240,237,232,0.6)" }}>
+              {events.length.toLocaleString()} events — CircleMarker size &amp; color by magnitude
             </p>
-            <div className="flex items-center gap-3 text-xs" style={{ color: "rgba(240,237,232,0.4)" }}>
+            <div className="flex items-center gap-3 text-xs" style={{ color: "rgba(240,237,232,0.7)" }}>
               <span style={{ color: "#0a84ff" }}>● &lt;M2</span>
-              <span style={{ color: "#30d158" }}>● M2-4</span>
-              <span style={{ color: "#ff9500" }}>● M4-6</span>
-              <span style={{ color: "#ff3b30" }}>● M6-7</span>
+              <span style={{ color: "#30d158" }}>● M2–4</span>
+              <span style={{ color: "#ff9500" }}>● M4–6</span>
+              <span style={{ color: "#ff3b30" }}>● M6–7</span>
               <span style={{ color: "#bf5af2" }}>● M7+</span>
             </div>
           </div>
         </div>
       )}
 
+      {/* Content: Heat */}
       {subTab === "heat" && (
         <div className="glass rounded-2xl overflow-hidden" style={{ border: "1px solid var(--border)" }}>
           {isLoading ? (
@@ -96,13 +133,14 @@ export default function GeographicTab() {
             <HeatMap data={events} height={520} />
           )}
           <div className="px-5 py-3">
-            <p className="text-xs" style={{ color: "rgba(240,237,232,0.4)" }}>
-              Density heatmap — weight proportional to magnitude
+            <p className="text-xs" style={{ color: "rgba(240,237,232,0.6)" }}>
+              Density heatmap — kernel density weighted by seismic magnitude
             </p>
           </div>
         </div>
       )}
 
+      {/* Content: Clusters */}
       {subTab === "clusters" && (
         <div className="flex flex-col gap-4">
           {/* Controls */}
@@ -112,65 +150,77 @@ export default function GeographicTab() {
           >
             <div>
               <label
+                htmlFor="dbscan-eps-slider"
                 className="block text-xs font-semibold uppercase tracking-widest mb-2"
-                style={{ color: "rgba(240,237,232,0.35)" }}
+                style={{ color: "rgba(240,237,232,0.6)" }}
               >
-                Epsilon (ε): {eps}°
+                Distance threshold (ε): {sliderEpsKm} km
               </label>
               <input
+                id="dbscan-eps-slider"
                 type="range"
-                min={0.5}
-                max={8}
-                step={0.5}
-                value={eps}
-                onChange={(e) => setEps(parseFloat(e.target.value))}
+                min={25}
+                max={800}
+                step={25}
+                value={sliderEpsKm}
+                onChange={(e) => setSliderEpsKm(parseFloat(e.target.value))}
                 className="w-48"
                 style={{ accentColor: "var(--primary)" }}
+                aria-label="DBSCAN Haversine distance threshold in kilometers"
               />
             </div>
             <div>
               <label
+                htmlFor="dbscan-min-samples"
                 className="block text-xs font-semibold uppercase tracking-widest mb-2"
-                style={{ color: "rgba(240,237,232,0.35)" }}
+                style={{ color: "rgba(240,237,232,0.6)" }}
               >
-                Min samples: {minSamples}
+                Min samples: {sliderMinSamples}
               </label>
               <input
+                id="dbscan-min-samples"
                 type="range"
                 min={2}
                 max={20}
                 step={1}
-                value={minSamples}
-                onChange={(e) => setMinSamples(parseInt(e.target.value))}
+                value={sliderMinSamples}
+                onChange={(e) => setSliderMinSamples(parseInt(e.target.value, 10))}
                 className="w-48"
                 style={{ accentColor: "var(--primary)" }}
+                aria-label="DBSCAN minimum samples per cluster"
               />
             </div>
             <button
-              onClick={() => refetchClusters()}
+              onClick={handleRunDBSCAN}
+              disabled={clustersFetching}
               className="px-5 py-2 rounded-xl text-sm font-semibold transition-all"
               style={{
                 background: "var(--primary)",
                 color: "#fff",
                 border: "none",
-                cursor: "pointer",
+                cursor: clustersFetching ? "wait" : "pointer",
                 boxShadow: "0 0 18px rgba(232,87,42,0.4)",
+                opacity: clustersFetching ? 0.7 : 1,
               }}
             >
-              Run DBSCAN
+              {clustersFetching ? "Computing DBSCAN..." : "Run DBSCAN"}
             </button>
             {clusters && (
-              <div style={{ color: "rgba(240,237,232,0.5)", fontSize: 13 }}>
-                {clusters.n_clusters} clusters · {clusters.n_noise} noise points
+              <div style={{ color: "rgba(240,237,232,0.75)", fontSize: 13 }}>
+                Found {clusters.n_clusters} clusters · {clusters.n_noise} noise points
               </div>
             )}
           </div>
+
+          <p className="text-xs px-2" style={{ color: "rgba(240,237,232,0.5)" }}>
+            Spatial grouping via DBSCAN with great-circle Haversine distance. Identifies geographic clusters, not earthquake predictions.
+          </p>
 
           {/* Map */}
           <div className="glass rounded-2xl overflow-hidden" style={{ border: "1px solid var(--border)" }}>
             {clustersLoading ? (
               <MapSkeleton height={500} />
-            ) : clusters ? (
+            ) : clusters && clusters.data && clusters.data.length > 0 ? (
               <ClusterMap
                 points={clusters.data}
                 centroids={clusters.centroids}
@@ -178,10 +228,10 @@ export default function GeographicTab() {
               />
             ) : (
               <div
-                className="flex items-center justify-center"
-                style={{ height: 500, color: "rgba(240,237,232,0.3)" }}
+                className="flex items-center justify-center p-8"
+                style={{ height: 500, color: "rgba(240,237,232,0.5)" }}
               >
-                Configure parameters above and click Run DBSCAN
+                No cluster points matching current parameters. Adjust distance threshold or minimum samples above and click Run DBSCAN.
               </div>
             )}
           </div>
