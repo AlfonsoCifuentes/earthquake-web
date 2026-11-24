@@ -1,0 +1,12 @@
+// Seismic Atlas en Cloudflare Workers (OpenNext). La API (antes funciones
+// Python de Vercel en api/) vive ahora en app/api/*/route.ts.
+// Desplegar: npx opennextjs-cloudflare build && npx wrangler deploy
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "earthquake-web",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2026-06-01",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "assets": { "directory": ".open-next/assets", "binding": "ASSETS" },
+  "observability": { "enabled": true }
+}
